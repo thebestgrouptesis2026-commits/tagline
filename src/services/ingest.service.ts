@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { getDb, type Tx } from "@/db/client";
 import { categorize, normalizeMerchant } from "@/domain/categorize";
+import { isSameHolder } from "@/domain/holder";
 import { signedAmount, type TxnKind } from "@/domain/ledger";
 import { formatMoney } from "@/domain/money";
 import { matchesSalary } from "@/domain/payday";
@@ -8,7 +9,7 @@ import { HttpError } from "@/lib/http";
 import { normalizeText } from "@/parsers/normalize";
 import { safeParse, selectParser } from "@/parsers/registry";
 import type { IngestSource, ParseResult, ParserInput } from "@/parsers/types";
-import { findAccountByLast4, findAccountForHint, findCashAccount, type AccountRow } from "@/repositories/accounts.repo";
+import { findAccountByLast4, findAccountForHint, findCashAccount, findUniqueBankAccount, type AccountRow } from "@/repositories/accounts.repo";
 import { findCategoryByName, listRules, recordRuleHit } from "@/repositories/categories.repo";
 import { findDuplicate, insertEvent, updateEvent, type IngestEventRow } from "@/repositories/ingest-events.repo";
 import { touchToken } from "@/repositories/tokens.repo";
@@ -186,6 +187,13 @@ async function record(tx: Tx, req: IngestRequest, eventId: string, result: Parse
   if (mv.counterparty?.last4) counter = await findAccountByLast4(tx, req.userId, mv.counterparty.last4, mv.currency);
   if (!counter && kind === "cash_withdrawal") counter = await findCashAccount(tx, req.userId, mv.currency);
   if (counter?.id === account.id) counter = null;
+  // Transferencia a uno mismo (mismo titular, ej. Plin Interbank → Yape): es movimiento interno.
+  // Si no sabemos cuál es la cuenta destino, se pide elegirla en vez de contarla como gasto.
+  const settings = await getUserSettings(tx, req.userId);
+  if (!counter && kind === "transfer_out" && isSameHolder(mv.counterparty?.holder, settings?.name)) {
+    counter = mv.counterparty?.bank ? await findUniqueBankAccount(tx, req.userId, mv.counterparty.bank, mv.currency, account.id) : null;
+    if (!counter) return review(`${amountText} a ti mismo: elige la cuenta destino`);
+  }
   if (counter?.type === "credit_card" && kind === "transfer_out") kind = "card_payment";
 
   const merchantNormalized = mv.merchant ? normalizeMerchant(mv.merchant) : null;
@@ -205,7 +213,6 @@ async function record(tx: Tx, req: IngestRequest, eventId: string, result: Parse
     }
   }
 
-  const settings = await getUserSettings(tx, req.userId);
   const posted = confidence >= (settings?.reviewThreshold ?? DEFAULT_REVIEW_THRESHOLD);
   const status = posted ? "posted" : "pending_review";
   const amountMinor = signedAmount(kind, mv.amountMinor);

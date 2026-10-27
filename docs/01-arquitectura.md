@@ -8,9 +8,9 @@
 | Monedas | PEN principal; USD habilitado como opción en cuentas, efectivo y tarjeta |
 | Sueldo | Mensual, S/ 1,320, llega el 27–28 a **BCP**, palabra clave `PLANILLA`. Si cae en fin de semana/feriado, se adelanta |
 | Ingresos variables | Frecuentes (casi diarios), categoría propia |
-| Tarjeta | **Interbank Visa Clásica**, bimoneda (PEN + USD), corte día 26, pago día 20 del mes siguiente, si el pago cae en no hábil se adelanta 1 día |
+| Tarjetas | **BCP iO**: corte día 26, pago día 20 del mes siguiente. **Interbank Visa Clásica**: corte día 27, pago día 20. Ambas bimoneda (PEN + USD) y, si el pago cae en no hábil, se adelanta 1 día. *(Actualizado: antes figuraba solo Interbank con corte 26.)* |
 | Cuotas | Con interés (TEA según perfil; referencia pública 19.42%–87.76% en soles) → se modela TEA por plan de cuotas |
-| Fuente de movimientos | **Correo** (no SMS) |
+| Fuente de movimientos | **Correo de Gmail** (no SMS), leído por Apps Script. Ingresos diarios por **Yape** y a veces transferencias BCP |
 | BD / Auth | Neon (rama por preview) + Auth.js con passkeys |
 | Visual | Sistema oscuro del DESIGN.md (tokens, no marca) + modo claro derivado; fuentes libres |
 | Alertas | Web Push de la PWA (principal) + bot de Telegram opcional para urgentes |

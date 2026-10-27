@@ -1,26 +1,103 @@
 {
   "email": "tu-correo@gmail.com",
   "accounts": [
-    { "key": "bcp", "type": "savings", "name": "BCP Ahorros", "bank": "bcp", "currency": "PEN", "last4": "1234", "openingBalance": "0.00", "color": "#ff7a00", "liquid": true },
-    { "key": "bcp-debito", "type": "debit_card", "name": "BCP Débito", "bank": "bcp", "currency": "PEN", "last4": "5678", "parent": "bcp" },
-    { "key": "efectivo", "type": "cash", "name": "Efectivo", "currency": "PEN", "openingBalance": "0.00", "color": "#828384" },
-    { "key": "efectivo-usd", "type": "cash", "name": "Efectivo USD", "currency": "USD", "openingBalance": "0.00", "color": "#828384" }
+    {
+      "key": "bcp",
+      "type": "savings",
+      "name": "BCP Ahorros",
+      "bank": "bcp",
+      "currency": "PEN",
+      "last4": "1234",
+      "openingBalance": "0.00",
+      "color": "#ff7a00",
+      "liquid": true
+    },
+    {
+      "key": "interbank",
+      "type": "savings",
+      "name": "Interbank Cuenta Simple",
+      "bank": "interbank",
+      "currency": "PEN",
+      "last4": "4321",
+      "openingBalance": "0.00",
+      "color": "#16a34a",
+      "liquid": true
+    },
+    {
+      "key": "bcp-debito",
+      "type": "debit_card",
+      "name": "BCP Débito",
+      "bank": "bcp",
+      "currency": "PEN",
+      "last4": "5678",
+      "parent": "bcp"
+    },
+    {
+      "key": "efectivo",
+      "type": "cash",
+      "name": "Efectivo",
+      "currency": "PEN",
+      "openingBalance": "0.00",
+      "color": "#828384"
+    },
+    {
+      "key": "efectivo-usd",
+      "type": "cash",
+      "name": "Efectivo USD",
+      "currency": "USD",
+      "openingBalance": "0.00",
+      "color": "#828384"
+    }
   ],
   "creditCards": [
+    {
+      "bank": "bcp",
+      "name": "iO",
+      "network": "visa",
+      "last4": "1111",
+      "limit": "3000.00",
+      "closingDay": 26,
+      "dueDay": 20,
+      "currencies": [
+        "PEN",
+        "USD"
+      ],
+      "installmentTea": "0.6599",
+      "openingDebt": {
+        "PEN": "0.00",
+        "USD": "0.00"
+      },
+      "color": "#ff7a00"
+    },
     {
       "bank": "interbank",
       "name": "Visa Clásica",
       "network": "visa",
-      "last4": "0000",
+      "last4": "2222",
       "limit": "3000.00",
-      "closingDay": 26,
+      "closingDay": 27,
       "dueDay": 20,
-      "currencies": ["PEN", "USD"],
+      "currencies": [
+        "PEN",
+        "USD"
+      ],
       "installmentTea": "0.6599",
-      "openingDebt": { "PEN": "0.00", "USD": "0.00" },
+      "openingDebt": {
+        "PEN": "0.00",
+        "USD": "0.00"
+      },
       "color": "#10b981"
     }
   ],
-  "salary": { "amount": "1320.00", "day": 27, "account": "bcp", "keywords": ["PLANILLA", "HABERES"] },
-  "usdRate": "3.75"
+  "salary": {
+    "amount": "1320.00",
+    "day": 27,
+    "account": "bcp",
+    "keywords": [
+      "PLANILLA",
+      "HABERES"
+    ]
+  },
+  "usdRate": "3.75",
+  "fullName": "Nombre Apellido Apellido"
 }

@@ -23,6 +23,8 @@ import { parseAmountToMinor, type Currency } from "@/domain/money";
 
 interface SeedConfig {
   email: string;
+  /** Nombre completo del titular: sirve para reconocer transferencias a uno mismo (Plin/Yape). */
+  fullName?: string;
   accounts: Array<{
     key: string;
     type: "checking" | "savings" | "cash" | "wallet" | "debit_card";
@@ -81,8 +83,8 @@ async function main() {
 
   const [user] = await db
     .insert(users)
-    .values({ email: config.email.toLowerCase(), name: config.email.split("@")[0] })
-    .onConflictDoUpdate({ target: users.email, set: { email: config.email.toLowerCase() } })
+    .values({ email: config.email.toLowerCase(), name: config.fullName ?? config.email.split("@")[0] })
+    .onConflictDoUpdate({ target: users.email, set: { email: config.email.toLowerCase(), ...(config.fullName ? { name: config.fullName } : {}) } })
     .returning({ id: users.id });
   const userId = user!.id;
 

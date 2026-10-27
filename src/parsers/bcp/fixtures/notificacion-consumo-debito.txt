@@ -1,0 +1,30 @@
+Asunto: Realizaste un consumo con tu Tarjeta de Débito BCP - Servicio de Notificaciones BCP
+De: BCP Notificaciones <notificaciones@notificacionesbcp.com.pe>
+
+Hola Juan Pablo,
+
+Realizaste un consumo de S/ 88.31 con tu Tarjeta de Débito BCP en ANTHROPIC* CLAUDE SUB.
+
+Por tu seguridad, te enviamos los datos de tu operación.
+
+Monto
+
+Total del consumo
+S/ 88.31
+
+Datos de la operación
+
+Operación realizada
+Consumo Tarjeta de Débito
+
+Fecha y hora
+26 de octubre de 2026 - 11:12 AM
+
+Número de Tarjeta de Débito
+************4567
+
+Empresa
+ANTHROPIC* CLAUDE SUB
+
+Número de operación
+391799

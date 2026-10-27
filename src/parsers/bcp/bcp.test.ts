@@ -69,6 +69,68 @@ describe("bcpParser — formatos SINTÉTICOS (pendientes de correo real)", () =>
   });
 });
 
+const notif = (rawText: string): ParserInput => ({
+  ...input(rawText),
+  sender: "BCP Notificaciones <notificaciones@notificacionesbcp.com.pe>",
+  receivedAt: new Date("2026-10-26T16:13:00Z"),
+});
+
+describe("bcpParser — notificaciones reales (notificacionesbcp.com.pe)", () => {
+  it("lo selecciona el registro por el remitente de notificaciones", () => {
+    expect(selectParser(notif("x"))?.id).toBe("bcp-email");
+  });
+
+  it("consumo con tarjeta de débito", () => {
+    const r = bcpParser.parse(notif(fixture("notificacion-consumo-debito.txt")));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.confidence).toBe(1);
+    expect(r.movement).toMatchObject({
+      kind: "purchase",
+      amountMinor: 8_831,
+      currency: "PEN",
+      merchant: "ANTHROPIC* CLAUDE SUB",
+      account: { bank: "bcp", last4: "4567", currency: "PEN" },
+      counterparty: null,
+      reference: "391799",
+      warnings: [],
+    });
+    // 11:12 AM en Lima = 16:12 UTC
+    expect(r.movement.occurredAt.toISOString()).toBe("2026-10-26T16:12:00.000Z");
+  });
+
+  it("yapeo a celular (propio): transferencia saliente sin últimos 4, cuenta por banco+moneda", () => {
+    const r = bcpParser.parse(notif(fixture("notificacion-yapeo.txt")));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.confidence).toBe(1);
+    expect(r.movement).toMatchObject({
+      kind: "transfer_out",
+      amountMinor: 1_000,
+      account: { bank: "bcp", last4: null, currency: "PEN" },
+      counterparty: { label: "Yape", holder: "Juan P Perez M" },
+      warnings: [],
+    });
+    // 01:02 PM en Lima = 18:02 UTC
+    expect(r.movement.occurredAt.toISOString()).toBe("2026-10-26T18:02:00.000Z");
+  });
+
+  it("tolera etiqueta y valor en la misma línea o en líneas separadas", () => {
+    const flat = fixture("notificacion-consumo-debito.txt").replace(/\n\n(?=[^\n])/g, "\n").replace(/^(Total del consumo|Operación realizada|Fecha y hora|Número de Tarjeta de Débito|Empresa|Número de operación)\n/gm, "$1   ");
+    const r = bcpParser.parse(notif(flat));
+    expect(r.ok && r.movement.amountMinor).toBe(8_831);
+    expect(r.ok && r.movement.account.last4).toBe("4567");
+  });
+
+  it("'Recibiste un yape' es suposición: detecta ingreso pero va a revisión", () => {
+    const r = bcpParser.parse(notif("Recibiste un yape de S/ 25.00 de JUAN P.\nFecha y hora\n26 de octubre de 2026 - 01:02 PM"));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.movement).toMatchObject({ kind: "transfer_in", amountMinor: 2_500 });
+    expect(r.confidence).toBeLessThan(0.8);
+  });
+});
+
 describe("bcpParser — casos borde", () => {
   it("correo publicitario sin operación ni monto → not_a_movement", () => {
     const r = bcpParser.parse(input("¡Aprovecha tu préstamo preaprobado! Banco de Crédito BCP"));

@@ -27,7 +27,14 @@ export interface ParsedMovement {
   merchant: string | null;
   account: AccountHint;
   /** Otra cuenta involucrada (destino de una transferencia, tarjeta pagada). */
-  counterparty: { last4: string | null; label: string } | null;
+  counterparty: {
+    last4: string | null;
+    label: string;
+    /** Banco de la otra cuenta si el mensaje lo dice (ej. destino "Yape" ⇒ "bcp"). */
+    bank?: string | null;
+    /** Titular de la otra cuenta, para reconocer transferencias a uno mismo. */
+    holder?: string | null;
+  } | null;
   /** Texto libre que el usuario escribió como categoría (entrada manual). */
   categoryHint: string | null;
   reference: string | null;

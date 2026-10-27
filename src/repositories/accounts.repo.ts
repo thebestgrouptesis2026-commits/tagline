@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import type { Executor } from "@/db/client";
 import { accounts } from "@/db/schema";
 import type { Currency } from "@/domain/money";
@@ -18,6 +18,7 @@ async function byId(ex: Executor, userId: string, id: string) {
  * - Efectivo: la cuenta `cash` en esa moneda.
  * - Últimos 4: si hay varias (tarjeta bimoneda), elige la de la moneda; si hay una sola, la usa.
  * - Una tarjeta de débito se resuelve a su cuenta vinculada (el saldo vive ahí).
+ * - Sin últimos 4 (ej. "desde tu Cuenta de ahorro Soles"): la única cuenta de ese banco y moneda.
  * Ambiguo o sin datos → null (el movimiento va a revisión).
  */
 export async function findAccountForHint(
@@ -29,7 +30,10 @@ export async function findAccountForHint(
     const account = await findCashAccount(ex, userId, hint.currency);
     return account ? { account, currencyMismatch: false } : null;
   }
-  if (!hint.last4) return null;
+  if (!hint.last4) {
+    const account = hint.bank ? await findUniqueBankAccount(ex, userId, hint.bank, hint.currency) : null;
+    return account ? { account, currencyMismatch: false } : null;
+  }
 
   const rows = await ex
     .select()
@@ -61,4 +65,22 @@ export async function findCashAccount(ex: Executor, userId: string, currency: Cu
     .where(and(live(userId), eq(accounts.type, "cash"), eq(accounts.currency, currency)))
     .limit(1);
   return row ?? null;
+}
+
+/** La única cuenta de ahorro/corriente/billetera de un banco en esa moneda (excluyendo `exceptId`); si hay 0 o varias, null. */
+export async function findUniqueBankAccount(ex: Executor, userId: string, bank: string, currency: Currency, exceptId?: string) {
+  const rows = await ex
+    .select()
+    .from(accounts)
+    .where(
+      and(
+        live(userId),
+        eq(accounts.bank, bank),
+        eq(accounts.currency, currency),
+        inArray(accounts.type, ["checking", "savings", "wallet"]),
+        exceptId ? ne(accounts.id, exceptId) : undefined,
+      ),
+    )
+    .limit(2);
+  return rows.length === 1 ? rows[0]! : null;
 }

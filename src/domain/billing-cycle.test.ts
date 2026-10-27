@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { cycleForDate, cycleForInstant, lastClosedCycle, type CardCycleConfig } from "./billing-cycle";
 import { PERU_HOLIDAY_SET } from "./holidays-pe";
 
-/** Interbank Visa Clásica: corte 26, pago 20 del mes siguiente, se adelanta si cae en no hábil. */
+/** BCP iO (corte 26) — antes llamada `interbank` en estos tests. Pago 20 del mes siguiente, se adelanta si cae en no hábil. */
 const interbank: CardCycleConfig = { closingDay: 26, dueDay: 20, closingAdjust: "none", dueAdjust: "previous" };
 const H = PERU_HOLIDAY_SET;
 
@@ -85,5 +85,32 @@ describe("cycleForDate — meses cortos y vencimiento en el mismo mes", () => {
       closingDate: "2026-10-05",
       dueDate: "2026-10-23", // 25/10/2026 es domingo
     });
+  });
+});
+
+/** Interbank Visa Clásica: corte 27, pago 20 del mes siguiente. */
+const interbank27: CardCycleConfig = { closingDay: 27, dueDay: 20, closingAdjust: "none", dueAdjust: "previous" };
+
+describe("cycleForDate — Interbank (corte 27 / pago 20)", () => {
+  it("el 27 todavía es del ciclo que cierra ese día", () => {
+    expect(cycleForDate("2026-10-27", interbank27, H)).toEqual({
+      periodStart: "2026-09-28",
+      closingDate: "2026-10-27",
+      dueDate: "2026-11-20",
+    });
+  });
+
+  it("el 28 abre el ciclo siguiente (se paga el 18/12 porque el 20/12 es domingo)", () => {
+    expect(cycleForDate("2026-10-28", interbank27, H)).toEqual({
+      periodStart: "2026-10-28",
+      closingDate: "2026-11-27",
+      dueDate: "2026-12-18",
+    });
+  });
+
+  it("el 26 cae en un ciclo distinto según la tarjeta (iO ya cerró, Interbank no)", () => {
+    expect(cycleForDate("2026-10-26", interbank, H).closingDate).toBe("2026-10-26");
+    expect(cycleForDate("2026-10-27", interbank, H).closingDate).toBe("2026-11-26");
+    expect(cycleForDate("2026-10-27", interbank27, H).closingDate).toBe("2026-10-27");
   });
 });

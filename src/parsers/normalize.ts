@@ -75,3 +75,46 @@ export function currencyFromLabel(s: string): Currency | null {
   if (/\bsoles\b|s\//.test(f)) return "PEN";
   return null;
 }
+
+const MONTHS: Record<string, number> = {
+  ene: 1, enero: 1, feb: 2, febrero: 2, mar: 3, marzo: 3, abr: 4, abril: 4, may: 5, mayo: 5, jun: 6, junio: 6,
+  jul: 7, julio: 7, ago: 8, agosto: 8, set: 9, sep: 9, sept: 9, septiembre: 9, setiembre: 9,
+  oct: 10, octubre: 10, nov: 11, noviembre: 11, dic: 12, diciembre: 12,
+};
+
+/**
+ * "26 de octubre de 2026 - 01:02 PM" | "12 Nov 2025 11:28 AM" | "08 Ago 2025 12:47 PM" (hora de Lima) → instante UTC.
+ * Sin hora → mediodía. AM/PM opcional (sin él, formato 24 h).
+ */
+export function parseLimaTextDate(s: string): Date | null {
+  const m = /(\d{1,2})\s+(?:de\s+)?([A-Za-zñÑ]{3,10})\.?\s+(?:de\s+)?(\d{4})(?:\D{1,5}(\d{1,2}):(\d{2})\s*([ap])?\.?\s?m?\.?)?/i.exec(foldKey(s));
+  if (!m) return null;
+  const month = MONTHS[m[2]!];
+  if (!month) return null;
+  return parseLimaDateTime(
+    `${m[1]}/${month}/${m[3]}${m[4] ? ` ${m[4]}:${m[5]}${m[6] ? ` ${m[6]}m` : ""}` : ""}`,
+  );
+}
+
+/**
+ * Para correos con tabla "Etiqueta   Valor" sin dos puntos (valor en la misma línea tras la
+ * etiqueta, o en la línea siguiente según cómo se aplane el HTML). Solo reconoce `labels`.
+ */
+export function parseLabelBlocks(text: string, labels: readonly string[]): Map<string, string> {
+  const folded = labels.map((l) => ({ label: l, key: foldKey(l) })).sort((a, b) => b.key.length - a.key.length);
+  const lines = text.split("\n");
+  const out = new Map<string, string>();
+  for (let i = 0; i < lines.length; i++) {
+    const f = foldKey(lines[i]!);
+    const hit = folded.find((l) => f === l.key || f.startsWith(`${l.key} `));
+    if (!hit || out.has(hit.key)) continue;
+    let value = f === hit.key ? "" : lines[i]!.trim().slice(hit.key.length).trim();
+    for (let j = i + 1; !value && j < lines.length; j++) {
+      const next = lines[j]!.trim();
+      if (next && !folded.some((l) => foldKey(next) === l.key)) value = next;
+      else if (next) break;
+    }
+    if (value) out.set(hit.key, value);
+  }
+  return out;
+}

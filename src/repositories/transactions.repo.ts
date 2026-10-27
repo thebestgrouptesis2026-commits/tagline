@@ -49,7 +49,7 @@ export async function lastSalaryAt(ex: Executor, userId: string): Promise<Date |
 
 export async function getUserSettings(ex: Executor, userId: string) {
   const [row] = await ex
-    .select({ reviewThreshold: users.reviewThreshold, baseCurrency: users.baseCurrency, timezone: users.timezone })
+    .select({ name: users.name, reviewThreshold: users.reviewThreshold, baseCurrency: users.baseCurrency, timezone: users.timezone })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
