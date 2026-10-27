@@ -1,0 +1,20 @@
+SINTÉTICO — formato supuesto a partir de la constancia de transferencia. Reemplazar por un correo real.
+
+Asunto: Constancia de Abono Banco de Crédito BCP
+De: BCP Comunica <bcpcomunica@email.bcp.com.pe>
+
+Hola, JUAN PEREZ
+
+Te informamos que se realizó un abono en tu cuenta.
+
+Detalle de la operación:
+-----------------------------------------------------------
+Operación:          Abono de Planilla
+Fecha y Hora:       27/11/2026 - 06:12 h.
+Cuenta de destino:  Cuentas de Ahorros Soles - *1234
+Ordenante:          EMPRESA EJEMPLO SAC
+Monto:              S/ 1,320.00
+Nro. de Operación:  654321
+-----------------------------------------------------------
+
+Banco de Crédito BCP.

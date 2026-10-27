@@ -1,0 +1,18 @@
+SINTÉTICO — formato supuesto a partir de la constancia de transferencia. Reemplazar por un correo real.
+
+Asunto: Constancia de Consumo Banco de Crédito BCP
+De: BCP Comunica <bcpcomunica@email.bcp.com.pe>
+
+Hola, JUAN PEREZ
+
+Realizaste un consumo con tu Tarjeta de Débito BCP.
+
+-----------------------------------------------------------
+Operación:          Consumo Tarjeta de Débito
+Fecha y Hora:       28/10/2026 - 20:41 h.
+Tarjeta:            Tarjeta de Débito Visa - ****1234
+Comercio:           PLAZA VEA SAN ISIDRO
+Monto:              S/ 45.90
+-----------------------------------------------------------
+
+Banco de Crédito BCP.

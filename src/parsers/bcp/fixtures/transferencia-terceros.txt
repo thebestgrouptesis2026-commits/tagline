@@ -1,0 +1,22 @@
+Asunto: Constancia de Transferencia Banco de Crédito BCP
+De: BCP Comunica <bcpcomunica@email.bcp.com.pe>
+
+Hola, JUAN PEREZ
+
+Te confirmamos que hemos realizado la transferencia que solicitaste desde tu Banca Móvil BCP.
+
+Detalle de la operación:
+-----------------------------------------------------------
+Operación:          Transferencia a Terceros
+Fecha y Hora:       27/10/2026 - 14:03 h.
+Cuenta de origen:   Cuentas de Ahorros Soles - *1234
+Cuenta de destino:  Cien / Ahorro Soles - *9876
+Beneficiario:       MARIA LOPEZ
+Monto:              S/ 150.00
+Nro. de Operación:  123456
+-----------------------------------------------------------
+
+Recuerda que el BCP nunca te pedirá tus claves, el número de tus tarjetas ni tus códigos de Token por correo electrónico ni por enlaces web.
+
+Gracias por usar nuestros canales digitales.
+Banco de Crédito BCP.

@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/*
+ * Tokens de Ciclo. Oscuro = sistema "midnight terminal" (lienzo casi negro, violeta como única señal).
+ * Claro = derivado: blanco amplio, mismo violeta oscurecido para texto con contraste AA.
+ * Semánticos (ingreso/gasto/alerta) añadidos: el sistema base no los trae.
+ */
+:root {
+  --canvas: #ffffff;
+  --surface: #f6f6f7;
+  --surface-2: #ececef;
+  --line: rgba(9, 9, 9, 0.1);
+  --fg: #090909;
+  --muted: #5f6062;
+  --brand: #7e22ce;
+  --brand-fill: #af50ff;
+  --brand-soft: #f3e8ff;
+  --income: #15803d;
+  --expense: #c2262d;
+  --warning: #b45309;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #090909;
+    --surface: rgba(247, 249, 250, 0.04);
+    --surface-2: rgba(247, 249, 250, 0.08);
+    --line: rgba(247, 249, 250, 0.12);
+    --fg: #f7f9fa;
+    --muted: #8f9091;
+    --brand: #e1bdff;
+    --brand-fill: #af50ff;
+    --brand-soft: rgba(175, 80, 255, 0.14);
+    --income: #3ddc97;
+    --expense: #ff7a7a;
+    --warning: #f5b84b;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-fill: var(--brand-fill);
+  --color-brand-soft: var(--brand-soft);
+  --color-income: var(--income);
+  --color-expense: var(--expense);
+  --color-warning: var(--warning);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-display: var(--font-instrument), ui-serif, Georgia, serif;
+
+  --radius-card: 19.2px;
+  --radius-control: 8px;
+  --radius-pill: 1584px;
+}
+
+html,
+body {
+  background: var(--canvas);
+  color: var(--fg);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Etiqueta "sellada": mono, mayúsculas, tracking amplio. Es el titular de sección del sistema. */
+.stamp {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
