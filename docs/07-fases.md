@@ -12,7 +12,7 @@
 - [x] Base en Neon migrada y con semilla real; login por correo (Resend) probado en local.
 - [ ] Desplegar y probar con `curl`.
 - [x] Barra inferior y pantalla de **Movimientos** (lista por día, filtros, recategorizar con aprendizaje).
-- [ ] Bandeja de **Revisión**.
+- [x] Bandeja de **Revisión**: confirmar, descartar o registrar a mano lo que la app no pudo leer (con contador en la barra).
 - [ ] Pantallas de **Cuentas** y **Tarjetas**.
 
 ## v1
