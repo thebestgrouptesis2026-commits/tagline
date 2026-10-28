@@ -19,6 +19,7 @@ async function byId(ex: Executor, userId: string, id: string) {
  * - Últimos 4: si hay varias (tarjeta bimoneda), elige la de la moneda; si hay una sola, la usa.
  * - Una tarjeta de débito se resuelve a su cuenta vinculada (el saldo vive ahí).
  * - Sin últimos 4 (ej. "desde tu Cuenta de ahorro Soles"): la única cuenta de ese banco y moneda.
+ *   Si la pista es de billetera (yapeo recibido), primero la billetera del banco.
  * Ambiguo o sin datos → null (el movimiento va a revisión).
  */
 export async function findAccountForHint(
@@ -31,7 +32,11 @@ export async function findAccountForHint(
     return account ? { account, currencyMismatch: false } : null;
   }
   if (!hint.last4) {
-    const account = hint.bank ? await findUniqueBankAccount(ex, userId, hint.bank, hint.currency) : null;
+    const account = !hint.bank
+      ? null
+      : hint.type === "wallet"
+        ? ((await findWalletAccount(ex, userId, hint.bank, hint.currency)) ?? (await findUniqueBankAccount(ex, userId, hint.bank, hint.currency)))
+        : await findUniqueBankAccount(ex, userId, hint.bank, hint.currency);
     return account ? { account, currencyMismatch: false } : null;
   }
 
@@ -70,6 +75,16 @@ export async function findCashAccount(ex: Executor, userId: string, currency: Cu
     .where(and(live(userId), eq(accounts.type, "cash"), eq(accounts.currency, currency)))
     .limit(1);
   return row ?? null;
+}
+
+/** La billetera de un banco (Yape en BCP), si hay exactamente una en esa moneda. */
+export async function findWalletAccount(ex: Executor, userId: string, bank: string, currency: Currency) {
+  const rows = await ex
+    .select()
+    .from(accounts)
+    .where(and(live(userId), eq(accounts.bank, bank), eq(accounts.currency, currency), eq(accounts.type, "wallet")))
+    .limit(2);
+  return rows.length === 1 ? rows[0]! : null;
 }
 
 /** La única cuenta de ahorro/corriente/billetera de un banco en esa moneda (excluyendo `exceptId`); si hay 0 o varias, null. */

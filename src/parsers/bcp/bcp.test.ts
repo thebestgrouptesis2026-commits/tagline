@@ -132,7 +132,7 @@ describe("bcpParser — notificaciones reales (notificacionesbcp.com.pe)", () =>
       amountMinor: 100,
       currency: "PEN",
       merchant: "Perez Lopez Juan Pablo",
-      account: { bank: "bcp", last4: null, currency: "PEN" },
+      account: { bank: "bcp", last4: null, type: "wallet", currency: "PEN" },
       counterparty: { label: "Yape", holder: "Perez Lopez Juan Pablo" },
       warnings: [],
     });

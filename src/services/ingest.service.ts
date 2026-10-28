@@ -9,7 +9,14 @@ import { HttpError } from "@/lib/http";
 import { normalizeText } from "@/parsers/normalize";
 import { safeParse, selectParser } from "@/parsers/registry";
 import type { IngestSource, ParsedMovement, ParseResult, ParserInput } from "@/parsers/types";
-import { findAccountByLast4, findAccountForHint, findCashAccount, findUniqueBankAccount, type AccountRow } from "@/repositories/accounts.repo";
+import {
+  findAccountByLast4,
+  findAccountForHint,
+  findCashAccount,
+  findUniqueBankAccount,
+  findWalletAccount,
+  type AccountRow,
+} from "@/repositories/accounts.repo";
 import { findCategoryByName, listRules, recordRuleHit } from "@/repositories/categories.repo";
 import { findDuplicate, insertEvent, listReviewEventsNear, updateEvent, type IngestEventRow } from "@/repositories/ingest-events.repo";
 import { touchToken } from "@/repositories/tokens.repo";
@@ -193,7 +200,10 @@ async function record(tx: Tx, req: IngestRequest, eventId: string, result: Parse
   // Si no sabemos cuál es la cuenta destino, se pide elegirla en vez de contarla como gasto.
   const settings = await getUserSettings(tx, req.userId);
   if (!counter && kind === "transfer_out" && isSameHolder(mv.counterparty?.holder, settings?.name)) {
-    counter = mv.counterparty?.bank ? await findUniqueBankAccount(tx, req.userId, mv.counterparty.bank, mv.currency, account.id) : null;
+    const bank = mv.counterparty?.bank;
+    // Un yapeo (o Plin a Yape) a tu propio número cae en tu cuenta Yape, si la tienes registrada como billetera.
+    const wallet = bank && mv.counterparty?.label === "Yape" ? await findWalletAccount(tx, req.userId, bank, mv.currency) : null;
+    counter = wallet && wallet.id !== account.id ? wallet : bank ? await findUniqueBankAccount(tx, req.userId, bank, mv.currency, account.id) : null;
     if (!counter) return review(`${amountText} a ti mismo: elige la cuenta destino`);
   }
   // Entrada desde otra cuenta tuya (ej. "Recibiste un yapeo de <tu nombre>"): el banco de origen avisa por separado.

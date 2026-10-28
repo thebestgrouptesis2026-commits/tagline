@@ -187,7 +187,13 @@ function parseNotification(text: string, receivedAt: Date): ParseResult {
       currency: amount.currency,
       occurredAt: occurredAt ?? receivedAt,
       merchant: kind === "purchase" ? merchant : holder,
-      account: { bank: "bcp", last4, type: null, currency: (accountLabel && currencyFromLabel(accountLabel)) || amount.currency },
+      account: {
+        bank: "bcp",
+        last4,
+        // Un yapeo recibido entra a tu cuenta Yape (la billetera de BCP); el correo no trae sus dígitos.
+        type: kind === "transfer_in" && isYapeo && !last4 ? "wallet" : null,
+        currency: (accountLabel && currencyFromLabel(accountLabel)) || amount.currency,
+      },
       counterparty:
         kind !== "purchase" && other
           ? isYapeo

@@ -14,7 +14,8 @@ export interface ParserInput {
 export interface AccountHint {
   bank: string | null;
   last4: string | null;
-  type: "cash" | null;
+  /** "wallet": billetera del banco (Yape es la cuenta billetera de BCP). */
+  type: "cash" | "wallet" | null;
   currency: Currency;
 }
 
