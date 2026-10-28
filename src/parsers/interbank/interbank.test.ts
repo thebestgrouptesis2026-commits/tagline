@@ -43,6 +43,32 @@ describe("interbankParser — correo real: Constancia de Pago Plin", () => {
     expect(r.ok && r.movement.occurredAt.toISOString()).toBe("2025-08-08T17:47:00.000Z");
   });
 
+  it("formato de oct. 2026: tabla sin dos puntos, 'Monto y moneda' y cuenta en tres líneas", () => {
+    const r = interbankParser.parse(input(fixture("plin-a-yape-2026.txt")));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.confidence).toBe(1);
+    expect(r.movement).toMatchObject({
+      kind: "transfer_out",
+      amountMinor: 100,
+      currency: "PEN",
+      account: { bank: "interbank", last4: "1234", currency: "PEN" },
+      counterparty: { label: "Yape", bank: "bcp", holder: "Juan P Perez M" },
+      reference: "53271150",
+      warnings: [],
+    });
+    // 10:49 PM en Lima = 03:49 UTC del día siguiente
+    expect(r.movement.occurredAt.toISOString()).toBe("2026-10-28T03:49:00.000Z");
+  });
+
+  it("formato 2026 con etiqueta y valor en la misma línea", () => {
+    const flat = fixture("plin-a-yape-2026.txt").replace(/^(Código de operación|Fecha y hora|Destinatario|Destino|Monto y moneda)\n/gm, "$1   ");
+    const r = interbankParser.parse(input(flat));
+    expect(r.ok && r.movement.amountMinor).toBe(100);
+    expect(r.ok && r.movement.counterparty?.holder).toBe("Juan P Perez M");
+    expect(r.ok && r.movement.account.last4).toBe("1234");
+  });
+
   it("otra constancia de Interbank sin ejemplo real → unrecognized (revisión)", () => {
     const r = interbankParser.parse(input("Constancia de Consumo Visa\nMoneda y monto: S/ 10.00"));
     expect(r).toMatchObject({ ok: false, reason: "unrecognized" });

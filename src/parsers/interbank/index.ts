@@ -1,18 +1,22 @@
-import { currencyFromLabel, foldKey, normalizeText, parseKeyValues, parseLimaTextDate, parseMoney } from "../normalize";
+import { currencyFromLabel, foldKey, normalizeText, parseKeyValues, parseLabelBlocks, parseLimaTextDate, parseMoney } from "../normalize";
 import { clampConfidence, type BankParser, type ParseResult } from "../types";
 
 /**
- * Constancias de Interbank por correo. Verificado con "Constancia de Pago Plin" (líneas "Clave: valor",
- * fecha suelta tipo "12 Nov 2025 11:28 AM", cuenta de cargo en dos líneas: nombre y número).
+ * Constancias de Interbank por correo. Verificado con "Constancia de Pago Plin" en dos formatos reales:
+ * - 2025: líneas "Clave: valor" y "Moneda y monto".
+ * - Oct 2026: tabla "Etiqueta / valor" sin dos puntos, "Monto y moneda" y la cuenta de cargo en varias
+ *   líneas ("Cuenta Simple", "Soles", "898 3330001234").
  * Otras constancias (consumos de la Visa, transferencias, pagos de servicios) no tienen ejemplo real
  * todavía: se reconocen como "unrecognized" y van a la bandeja de revisión.
  */
-// interbank.pe y netinterbank.com.pe (el remitente real aún está por confirmar con un correo).
+// Remitente real: "Interbank Servicio al Cliente <servicioalcliente@netinterbank.com.pe>".
 const SENDER = /@(?:[a-z0-9-]+\.)*(?:net)?interbank\.(?:com\.)?pe>?\s*$/i;
+
+const LABELS = ["Código de operación", "Fecha y hora", "Cuenta cargo", "Destinatario", "Destino", "Monto y moneda", "Moneda y monto"] as const;
 
 export const interbankParser: BankParser = {
   id: "interbank-email",
-  version: 1,
+  version: 2,
 
   canParse(input) {
     return input.source !== "manual" && (SENDER.test(input.sender) || /\bInterbank\b/i.test(input.rawText));
@@ -20,9 +24,12 @@ export const interbankParser: BankParser = {
 
   parse(input): ParseResult {
     const text = normalizeText(input.rawText);
-    const kv = parseKeyValues(text);
+    // Primero "Clave: valor"; lo que falte se busca como tabla (etiqueta y valor sin dos puntos).
+    const colon = parseKeyValues(text);
+    const table = parseLabelBlocks(text, LABELS);
+    const kv = { get: (key: string) => colon.get(key) ?? table.get(key) };
     const title = /constancia de ([^\n]+)/i.exec(text)?.[1] ?? "";
-    const amount = parseMoney(kv.get("moneda y monto") ?? "");
+    const amount = parseMoney(kv.get("moneda y monto") ?? kv.get("monto y moneda") ?? "");
 
     if (!title && !amount) return { ok: false, reason: "not_a_movement" };
     if (!/^pago plin/i.test(foldKey(title))) {
@@ -40,9 +47,9 @@ export const interbankParser: BankParser = {
       warnings.push("sin_fecha");
     }
 
-    // "Cuenta cargo: Cuenta Simple Soles" + línea siguiente "898 3330001234".
-    const cargo = /cuenta cargo:\s*([^\n]+)(?:\n\s*([\d ]{8,}))?/i.exec(text);
-    const last4 = cargo?.[2]?.replace(/\D/g, "").slice(-4) || null;
+    // Todo lo que hay entre "Cuenta cargo" y la siguiente etiqueta: nombre, moneda y número (en 1 a 3 líneas).
+    const cargo = /cuenta cargo:?\s*([\s\S]*?)(?=\n\s*(?:destinatario|destino|monto|moneda|c[oó]digo)\b|$)/i.exec(text)?.[1] ?? "";
+    const last4 = /\d[\d ]{7,}/.exec(cargo)?.[0].replace(/\D/g, "").slice(-4) || null;
     if (!last4) {
       confidence -= 0.3;
       warnings.push("sin_cuenta");
@@ -66,7 +73,7 @@ export const interbankParser: BankParser = {
           bank: "interbank",
           last4,
           type: null,
-          currency: (cargo && currencyFromLabel(cargo[1]!)) || amount.currency,
+          currency: currencyFromLabel(cargo) || amount.currency,
         },
         counterparty: { last4: null, label: destino || "Plin", bank: destinationBank, holder },
         categoryHint: null,

@@ -5,7 +5,7 @@ La conversación con Claude no se conserva entre sesiones ni entre computadoras.
 ## Estado (2026-10-27)
 - Entregables 1–6 del prompt original hechos: arquitectura, esquema (26 tablas), API, estructura, código inicial (ingesta, parsers, ciclo, disponible, pantalla de inicio).
 - Entregables 7–9 escritos: [04-gmail-apps-script.md](04-gmail-apps-script.md), [05-despliegue.md](05-despliegue.md), [06-atajos-ios.md](06-atajos-ios.md), [07-fases.md](07-fases.md).
-- `npm run typecheck` y `npm test` pasan (85 tests) con Node 22.
+- `npm run typecheck` y `npm test` pasan (87 tests) con Node 22.
 - 2026-10-27 (noche): base Neon creada, migrada y con semilla real; login con Resend funciona en local. Pantallas de Movimientos y Revisión y barra inferior hechas. **Aún no hay nada en Vercel.** Ninguna credencial real está en el repo (`.env` y `scripts/seed.config.json` son locales: en otra PC hay que recrearlos).
 
 ## Decisiones tomadas (resumen; detalle en [01-arquitectura.md](01-arquitectura.md))
@@ -28,7 +28,7 @@ nvm install 22 && nvm use 22
 git clone https://github.com/thebestgrouptesis2026-commits/tagline.git ~/tagline   # o: git pull
 cd ~/tagline
 npm install
-npm run typecheck && npm test      # deben pasar los 85 tests
+npm run typecheck && npm test      # deben pasar los 87 tests
 ```
 
 ## Neon y entorno (solo en la PC personal; nunca subas `.env`)
@@ -45,7 +45,7 @@ npm run typecheck && npm test      # deben pasar los 85 tests
 5. Después: Vercel ([05-despliegue.md](05-despliegue.md)), Apps Script ([04](04-gmail-apps-script.md)) y Atajo ([06](06-atajos-ios.md)).
 
 ## Pendiente (en orden)
-2. **Correos reales en texto plano** (Gmail → ⋮ → *Mostrar original*, con datos sensibles tapados) para reemplazar fixtures sintéticos: abono de planilla BCP, consumo con la Visa Interbank, pago de tarjeta y el remitente real de Interbank (el Yape recibido ya se verificó el 27/10) para el filtro de Gmail.
+2. **Correos reales en texto plano** (Gmail → ⋮ → *Mostrar original*, con datos sensibles tapados) para reemplazar fixtures sintéticos: abono de planilla BCP, consumo con la Visa Interbank, pago de tarjeta (el Yape recibido y el Plin de Interbank con su remitente real `servicioalcliente@netinterbank.com.pe` ya se verificaron el 27/10) para el filtro de Gmail.
 3. Confirmar en el seed: red de la iO (¿Visa?), monedas y últimos 4 de cada tarjeta/cuenta.
 4. Construir: Cuentas, Tarjetas, Estadísticas (ver [07-fases.md](07-fases.md)).
 5. `/api/cron/daily` no existe aún (alertas y recurrentes, v1).
