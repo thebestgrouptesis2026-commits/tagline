@@ -1,4 +1,4 @@
-import { and, eq, or } from "drizzle-orm";
+import { and, between, eq, or } from "drizzle-orm";
 import type { Executor } from "@/db/client";
 import { ingestEvents } from "@/db/schema";
 
@@ -33,4 +33,18 @@ export async function updateEvent(ex: Executor, userId: string, id: string, patc
     .update(ingestEvents)
     .set(patch)
     .where(and(eq(ingestEvents.id, id), eq(ingestEvents.userId, userId)));
+}
+
+/** Eventos en revisión recibidos cerca de `around` (para cerrar el aviso de entrada de una transferencia propia). */
+export async function listReviewEventsNear(ex: Executor, userId: string, around: Date, windowMs: number) {
+  return ex
+    .select({ id: ingestEvents.id, parsed: ingestEvents.parsed })
+    .from(ingestEvents)
+    .where(
+      and(
+        eq(ingestEvents.userId, userId),
+        eq(ingestEvents.status, "needs_review"),
+        between(ingestEvents.receivedAt, new Date(around.getTime() - windowMs), new Date(around.getTime() + windowMs)),
+      ),
+    );
 }

@@ -38,7 +38,7 @@ const SALARY_WORDS = ["PLANILLA", "HABERES", "REMUNERACION"];
 
 export const bcpParser: BankParser = {
   id: "bcp-email",
-  version: 2,
+  version: 3,
 
   canParse(input) {
     return input.source !== "manual" && (SENDER.test(input.sender) || /Banco de Cr[eé]dito BCP/i.test(input.rawText));
@@ -119,36 +119,31 @@ const NOTIFICATION_LABELS = [
   "Empresa",
   "Número de operación",
   "Enviado a",
+  "Enviado por",
   "Monto enviado",
+  "Monto recibido",
   "Total del consumo",
 ] as const;
 
 /**
- * Notificaciones nuevas de BCP. Verificadas con correos reales: consumo con tarjeta de débito
- * y yapeo a celular. "Recibiste un yape" es una suposición (sin ejemplo real): va a revisión.
+ * Notificaciones nuevas de BCP. Verificadas con correos reales: consumo con tarjeta de débito,
+ * yapeo a celular enviado y yapeo recibido.
  */
 function parseNotification(text: string, receivedAt: Date): ParseResult {
   const kv = parseLabelBlocks(text, NOTIFICATION_LABELS);
   const get = (label: string) => kv.get(foldKey(label));
   const headline = /^(realizaste un (?:consumo|yapeo)[^\n]*|recibiste un yape[^\n]*)/im.exec(text)?.[1] ?? "";
-  const amount = parseMoney(get("Total del consumo") ?? get("Monto enviado") ?? headline);
+  const amount = parseMoney(get("Total del consumo") ?? get("Monto enviado") ?? get("Monto recibido") ?? headline);
   if (!amount) return { ok: false, reason: "unrecognized", detail: "sin monto" };
 
   const warnings: string[] = [];
   let confidence = 1;
   const h = foldKey(headline);
-  let kind: TxnKind;
-  let verified = true;
-  if (h.startsWith("realizaste un consumo")) kind = "purchase";
-  else if (h.startsWith("realizaste un yapeo")) kind = "transfer_out";
-  else {
-    kind = "transfer_in";
-    verified = false;
-  }
-  if (!verified) {
-    confidence -= 0.25;
-    warnings.push("formato_no_verificado");
-  }
+  const kind: TxnKind = h.startsWith("realizaste un consumo")
+    ? "purchase"
+    : h.startsWith("realizaste un yapeo")
+      ? "transfer_out"
+      : "transfer_in";
 
   const occurredAt = parseLimaTextDate(get("Fecha y hora") ?? "");
   if (!occurredAt) {
@@ -166,8 +161,9 @@ function parseNotification(text: string, receivedAt: Date): ParseResult {
   }
 
   const merchant = kind === "purchase" ? (get("Empresa") ?? /\ben (.+?)\.?$/i.exec(headline)?.[1] ?? null) : null;
-  const recipient = get("Enviado a");
-  const holder = recipient?.replace(/\s*\*[\s*\d]*$/, "").replace(/\.$/, "").trim() || null;
+  // Enviado: "Enviado a  Juan P Perez M. *** **3 644". Recibido: "Enviado por  Perez Lopez Juan Pablo".
+  const other = kind === "transfer_in" ? (get("Enviado por") ?? /\bde ([^\d]+?)\.?$/i.exec(headline)?.[1]) : get("Enviado a");
+  const holder = other?.replace(/\s*\*[\s*\d]*$/, "").replace(/\.$/, "").trim() || null;
   const accountLabel = /desde tu (.+?)\.?$/i.exec(headline)?.[1];
 
   return {
@@ -178,9 +174,9 @@ function parseNotification(text: string, receivedAt: Date): ParseResult {
       amountMinor: amount.amountMinor,
       currency: amount.currency,
       occurredAt: occurredAt ?? receivedAt,
-      merchant: kind === "transfer_out" ? holder : merchant,
+      merchant: kind === "purchase" ? merchant : holder,
       account: { bank: "bcp", last4, type: null, currency: (accountLabel && currencyFromLabel(accountLabel)) || amount.currency },
-      counterparty: kind === "transfer_out" && recipient ? { last4: null, label: "Yape", holder } : null,
+      counterparty: kind !== "purchase" && other ? { last4: null, label: "Yape", holder } : null,
       categoryHint: null,
       reference: get("Número de operación") ?? null,
       keywords: [],

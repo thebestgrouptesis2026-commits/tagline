@@ -8,16 +8,18 @@ import { matchesSalary } from "@/domain/payday";
 import { HttpError } from "@/lib/http";
 import { normalizeText } from "@/parsers/normalize";
 import { safeParse, selectParser } from "@/parsers/registry";
-import type { IngestSource, ParseResult, ParserInput } from "@/parsers/types";
+import type { IngestSource, ParsedMovement, ParseResult, ParserInput } from "@/parsers/types";
 import { findAccountByLast4, findAccountForHint, findCashAccount, findUniqueBankAccount, type AccountRow } from "@/repositories/accounts.repo";
 import { findCategoryByName, listRules, recordRuleHit } from "@/repositories/categories.repo";
-import { findDuplicate, insertEvent, updateEvent, type IngestEventRow } from "@/repositories/ingest-events.repo";
+import { findDuplicate, insertEvent, listReviewEventsNear, updateEvent, type IngestEventRow } from "@/repositories/ingest-events.repo";
 import { touchToken } from "@/repositories/tokens.repo";
 import {
+  findTransferInLeg,
   getUserSettings,
   insertTransaction,
   linkTransfer,
   listActiveSalarySources,
+  PAIR_WINDOW_MS,
 } from "@/repositories/transactions.repo";
 
 export interface IngestRequest {
@@ -194,6 +196,14 @@ async function record(tx: Tx, req: IngestRequest, eventId: string, result: Parse
     counter = mv.counterparty?.bank ? await findUniqueBankAccount(tx, req.userId, mv.counterparty.bank, mv.currency, account.id) : null;
     if (!counter) return review(`${amountText} a ti mismo: elige la cuenta destino`);
   }
+  // Entrada desde otra cuenta tuya (ej. "Recibiste un yapeo de <tu nombre>"): el banco de origen avisa por separado.
+  // Si ese aviso ya creó la transferencia, este correo sobra; si no, se pide la cuenta de origen en vez de contarlo como ingreso.
+  if (!counter && kind === "transfer_in" && isSameHolder(mv.counterparty?.holder, settings?.name)) {
+    if (await findTransferInLeg(tx, req.userId, account.id, mv.amountMinor, mv.occurredAt)) {
+      return { eventStatus: "ignored", status: "ignored", message: `Ya registrado: ${amountText} entre tus cuentas`, confidence, parsed: mv };
+    }
+    return review(`${amountText} de ti mismo: elige la cuenta de origen`);
+  }
   if (counter?.type === "credit_card" && kind === "transfer_out") kind = "card_payment";
 
   const merchantNormalized = mv.merchant ? normalizeMerchant(mv.merchant) : null;
@@ -251,6 +261,8 @@ async function record(tx: Tx, req: IngestRequest, eventId: string, result: Parse
     });
     const [from, to] = amountMinor < 0 ? [main.id, mirror.id] : [mirror.id, main.id];
     await linkTransfer(tx, req.userId, from, to);
+    // El aviso de entrada de esta misma transferencia pudo llegar antes y quedar en Revisión: ya está cubierto.
+    if (amountMinor < 0) await closePairedIncoming(tx, req.userId, mv.amountMinor, mv.currency, mv.occurredAt, settings?.name);
   }
 
   const message = describe({ kind, amountText, account, counter, merchant: mv.merchant, categoryName, cash: mv.account.type === "cash" });
@@ -262,6 +274,15 @@ async function record(tx: Tx, req: IngestRequest, eventId: string, result: Parse
     confidence,
     parsed: mv,
   };
+}
+
+async function closePairedIncoming(tx: Tx, userId: string, amountMinor: number, currency: string, around: Date, ownName: string | null | undefined) {
+  const candidates = await listReviewEventsNear(tx, userId, around, PAIR_WINDOW_MS);
+  const hit = candidates.find((e) => {
+    const p = e.parsed as Partial<ParsedMovement> | null;
+    return p?.kind === "transfer_in" && p.amountMinor === amountMinor && p.currency === currency && isSameHolder(p.counterparty?.holder, ownName);
+  });
+  if (hit) await updateEvent(tx, userId, hit.id, { status: "ignored", replyText: "Ya registrado como movimiento entre tus cuentas" });
 }
 
 function describe(p: {

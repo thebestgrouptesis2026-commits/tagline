@@ -71,6 +71,7 @@ export interface RegisterDefaults {
   amount: string;
   date: string;
   accountId: string;
+  toAccountId: string;
   merchant: string;
 }
 
@@ -149,7 +150,7 @@ export function RegisterForm({
       {type === "transferencia" ? (
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="text-muted">Hacia</span>
-          <select name="toAccountId" defaultValue="" required className={field}>
+          <select name="toAccountId" defaultValue={defaults.toAccountId} required className={field}>
             <option value="" disabled>
               Elige la cuenta destino
             </option>

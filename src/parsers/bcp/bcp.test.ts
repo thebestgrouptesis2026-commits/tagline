@@ -122,12 +122,34 @@ describe("bcpParser — notificaciones reales (notificacionesbcp.com.pe)", () =>
     expect(r.ok && r.movement.account.last4).toBe("4567");
   });
 
-  it("'Recibiste un yape' es suposición: detecta ingreso pero va a revisión", () => {
-    const r = bcpParser.parse(notif("Recibiste un yape de S/ 25.00 de JUAN P.\nFecha y hora\n26 de octubre de 2026 - 01:02 PM"));
+  it("yapeo recibido: ingreso con quién lo envió (titular para detectar si eres tú)", () => {
+    const r = bcpParser.parse(notif(fixture("notificacion-yapeo-recibido.txt")));
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.movement).toMatchObject({ kind: "transfer_in", amountMinor: 2_500 });
-    expect(r.confidence).toBeLessThan(0.8);
+    expect(r.confidence).toBe(1);
+    expect(r.movement).toMatchObject({
+      kind: "transfer_in",
+      amountMinor: 100,
+      currency: "PEN",
+      merchant: "Perez Lopez Juan Pablo",
+      account: { bank: "bcp", last4: null, currency: "PEN" },
+      counterparty: { label: "Yape", holder: "Perez Lopez Juan Pablo" },
+      warnings: [],
+    });
+    // 10:37 PM en Lima = 03:37 UTC del día siguiente
+    expect(r.movement.occurredAt.toISOString()).toBe("2026-10-28T03:37:00.000Z");
+  });
+
+  it("yapeo recibido con la tabla aplanada en una línea por fila", () => {
+    const flat = fixture("notificacion-yapeo-recibido.txt").replace(/^(Monto recibido|Operación realizada|Fecha y hora|Enviado por)\n/gm, "$1   ");
+    const r = bcpParser.parse(notif(flat));
+    expect(r.ok && r.movement.amountMinor).toBe(100);
+    expect(r.ok && r.movement.counterparty?.holder).toBe("Perez Lopez Juan Pablo");
+  });
+
+  it("yapeo recibido sin tabla: el remitente sale del titular", () => {
+    const r = bcpParser.parse(notif("Recibiste un yapeo de S/ 25.00 de Maria Lopez.\nFecha y hora\n26 de octubre de 2026 - 01:02 PM"));
+    expect(r.ok && r.movement.counterparty?.holder).toBe("Maria Lopez");
   });
 });
 

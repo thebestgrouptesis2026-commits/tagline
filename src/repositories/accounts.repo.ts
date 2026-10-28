@@ -42,7 +42,12 @@ export async function findAccountForHint(
     .limit(5);
 
   const sameCurrency = rows.filter((r) => r.currency === hint.currency);
-  const found = sameCurrency.length === 1 ? sameCurrency[0] : rows.length === 1 ? rows[0] : undefined;
+  let found = sameCurrency.length === 1 ? sameCurrency[0] : rows.length === 1 ? rows[0] : undefined;
+  // Cuenta registrada sin últimos 4: si es la única de ese banco y moneda, el correo es de ella.
+  if (!found && rows.length === 0 && hint.bank) {
+    const only = await findUniqueBankAccount(ex, userId, hint.bank, hint.currency);
+    if (only && only.last4 === null) found = only;
+  }
   if (!found) return null;
 
   const account = found.type === "debit_card" && found.parentAccountId ? await byId(ex, userId, found.parentAccountId) : found;

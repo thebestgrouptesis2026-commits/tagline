@@ -97,7 +97,7 @@ function ReviewCard({
 
       <details className="text-sm">
         <summary className="cursor-pointer text-muted">Ver mensaje original</summary>
-        <pre className="mt-2 max-h-64 overflow-auto rounded-control bg-surface p-3 font-mono text-xs whitespace-pre-wrap break-words">
+        <pre className="mt-2 max-h-64 overflow-auto rounded-control bg-surface p-3 font-mono text-xs whitespace-pre-wrap wrap-break-word">
           {item.rawText}
         </pre>
       </details>
@@ -126,12 +126,10 @@ function ReviewCard({
 function defaultsFor(item: ReviewItem, accounts: Accounts, received: string): RegisterDefaults {
   const mv = item.parsed as Partial<ParsedMovement> | null;
   const kind = mv?.kind;
+  // Con titular solo llegan aquí las transferencias contigo mismo (las de terceros se registran solas).
+  const selfTransfer = (kind === "transfer_out" || kind === "transfer_in") && !!mv?.counterparty?.holder;
   const type: RegisterDefaults["type"] =
-    kind && (internal.has(kind) || (kind === "transfer_out" && mv?.counterparty?.holder))
-      ? "transferencia"
-      : kind && income.has(kind)
-        ? "ingreso"
-        : "gasto";
+    kind && (internal.has(kind) || selfTransfer) ? "transferencia" : kind && income.has(kind) ? "ingreso" : "gasto";
   const hint = mv?.account;
   const byLast4 = hint?.last4 ? accounts.filter((a) => a.last4 === hint.last4) : [];
   const byBank = hint?.bank ? accounts.filter((a) => a.bank === hint.bank && a.currency === hint.currency && a.type !== "credit_card") : [];
@@ -141,7 +139,9 @@ function defaultsFor(item: ReviewItem, accounts: Accounts, received: string): Re
     type,
     amount: typeof mv?.amountMinor === "number" ? (mv.amountMinor / 100).toFixed(2) : "",
     date: occurred,
-    accountId: guess?.id ?? "",
+    // En una entrada desde otra cuenta tuya, la cuenta del correo es el destino; el origen lo eliges tú.
+    accountId: type === "transferencia" && kind === "transfer_in" ? "" : (guess?.id ?? ""),
+    toAccountId: type === "transferencia" && kind === "transfer_in" ? (guess?.id ?? "") : "",
     merchant: mv?.merchant ?? "",
   };
 }

@@ -7,7 +7,8 @@ import { clampConfidence, type BankParser, type ParseResult } from "../types";
  * Otras constancias (consumos de la Visa, transferencias, pagos de servicios) no tienen ejemplo real
  * todavía: se reconocen como "unrecognized" y van a la bandeja de revisión.
  */
-const SENDER = /@(?:[a-z0-9-]+\.)*interbank\.pe>?\s*$/i;
+// interbank.pe y netinterbank.com.pe (el remitente real aún está por confirmar con un correo).
+const SENDER = /@(?:[a-z0-9-]+\.)*(?:net)?interbank\.(?:com\.)?pe>?\s*$/i;
 
 export const interbankParser: BankParser = {
   id: "interbank-email",

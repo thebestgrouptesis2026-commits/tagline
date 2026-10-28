@@ -206,13 +206,13 @@ export default async function MovementsPage({ searchParams }: { searchParams: Pr
                             {t.description ? (
                               <>
                                 <dt className="text-muted">Detalle</dt>
-                                <dd className="text-right break-words">{t.description}</dd>
+                                <dd className="text-right wrap-break-word">{t.description}</dd>
                               </>
                             ) : null}
                             {t.note ? (
                               <>
                                 <dt className="text-muted">Nota</dt>
-                                <dd className="text-right break-words">{t.note}</dd>
+                                <dd className="text-right wrap-break-word">{t.note}</dd>
                               </>
                             ) : null}
                           </dl>
