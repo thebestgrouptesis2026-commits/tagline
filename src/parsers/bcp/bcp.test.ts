@@ -153,6 +153,73 @@ describe("bcpParser — notificaciones reales (notificacionesbcp.com.pe)", () =>
   });
 });
 
+describe("bcpParser — texto real de Gmail getPlainBody() (negritas con *, tabla aplanada)", () => {
+  it("transferencia a terceros: monto, fecha, cuenta origen y destino por últimos 4", () => {
+    const r = bcpParser.parse(notif(fixture("gmail-transferencia-terceros.txt")));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.confidence).toBe(1);
+    expect(r.movement).toMatchObject({
+      kind: "transfer_out",
+      amountMinor: 200_000,
+      currency: "PEN",
+      merchant: "Lopez Rojas Maria E",
+      account: { bank: "bcp", last4: "1072", currency: "PEN" },
+      counterparty: { last4: "9021", holder: "Lopez Rojas Maria E" },
+      reference: "06080198",
+      warnings: [],
+    });
+    // 08:38 PM en Lima = 01:38 UTC del día siguiente
+    expect(r.movement.occurredAt.toISOString()).toBe("2026-10-25T01:38:00.000Z");
+  });
+
+  it("yapeo enviado: cuenta de origen por 'Desde … **** 1046'; el celular no cuenta como últimos 4", () => {
+    const r = bcpParser.parse(notif(fixture("gmail-yapeo-enviado.txt")));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.movement).toMatchObject({
+      kind: "transfer_out",
+      amountMinor: 1_500,
+      account: { bank: "bcp", last4: "1046", currency: "PEN" },
+      counterparty: { last4: null, label: "Yape", bank: "bcp", holder: "Juan P Perez M" },
+      reference: "05078308",
+    });
+    expect(r.movement.occurredAt.toISOString()).toBe("2026-10-24T23:25:00.000Z");
+  });
+
+  it("transferencia entre mis cuentas: destino por últimos 4, sin titular", () => {
+    const raw = fixture("gmail-transferencia-terceros.txt")
+      .replace("Transferencia a terceros BCP", "Transferencia entre mis cuentas")
+      .replace("Enviado a *Lopez Rojas Maria E.*", "Enviado a **")
+      .replace("**** 1072 Enviado a **", "**** 1072 Enviado a *Clasica*");
+    const r = bcpParser.parse(notif(raw));
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.movement).toMatchObject({
+      kind: "transfer_out",
+      account: { last4: "1072" },
+      counterparty: { last4: "9021", label: "Entre mis cuentas", holder: null },
+    });
+  });
+
+  it("yapeo recibido con negritas de Gmail", () => {
+    const raw = fixture("notificacion-yapeo-recibido.txt").replace("yapeo de S/ 1.00", "*yapeo de S/ 1.00*").replace(/^S\/ 1\.00$/m, "*S/ 1.00*");
+    const r = bcpParser.parse(notif(raw));
+    expect(r.ok && r.movement.amountMinor).toBe(100);
+    expect(r.ok && r.movement.kind).toBe("transfer_in");
+  });
+
+  it("notificación con monto pero formato desconocido → revisión, no se ignora", () => {
+    const r = bcpParser.parse(notif("Hola,\nRealizaste un pago de servicio de *S/ 45.00* con tu cuenta."));
+    expect(r).toMatchObject({ ok: false, reason: "unrecognized" });
+  });
+
+  it("aviso sin monto (configuración de tarjeta) → not_a_movement", () => {
+    const r = bcpParser.parse(notif("Realizaste una configuración para tu Tarjeta de Débito ."));
+    expect(r).toEqual({ ok: false, reason: "not_a_movement" });
+  });
+});
+
 describe("bcpParser — casos borde", () => {
   it("correo publicitario sin operación ni monto → not_a_movement", () => {
     const r = bcpParser.parse(input("¡Aprovecha tu préstamo preaprobado! Banco de Crédito BCP"));

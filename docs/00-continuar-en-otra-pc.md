@@ -5,7 +5,7 @@ La conversación con Claude no se conserva entre sesiones ni entre computadoras.
 ## Estado (2026-10-27)
 - Entregables 1–6 del prompt original hechos: arquitectura, esquema (26 tablas), API, estructura, código inicial (ingesta, parsers, ciclo, disponible, pantalla de inicio).
 - Entregables 7–9 escritos: [04-gmail-apps-script.md](04-gmail-apps-script.md), [05-despliegue.md](05-despliegue.md), [06-atajos-ios.md](06-atajos-ios.md), [07-fases.md](07-fases.md).
-- `npm run typecheck` y `npm test` pasan (87 tests) con Node 22.
+- `npm run typecheck` y `npm test` pasan (93 tests) con Node 22.
 - 2026-10-27 (noche): base Neon creada, migrada y con semilla real; login con Resend funciona en local. Pantallas de Movimientos y Revisión y barra inferior hechas. **Aún no hay nada en Vercel.** Ninguna credencial real está en el repo (`.env` y `scripts/seed.config.json` son locales: en otra PC hay que recrearlos).
 
 ## Decisiones tomadas (resumen; detalle en [01-arquitectura.md](01-arquitectura.md))
@@ -28,7 +28,7 @@ nvm install 22 && nvm use 22
 git clone https://github.com/thebestgrouptesis2026-commits/tagline.git ~/tagline   # o: git pull
 cd ~/tagline
 npm install
-npm run typecheck && npm test      # deben pasar los 87 tests
+npm run typecheck && npm test      # deben pasar los 93 tests
 ```
 
 ## Neon y entorno (solo en la PC personal; nunca subas `.env`)

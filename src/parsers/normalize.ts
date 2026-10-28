@@ -1,10 +1,16 @@
 import { LIMA_OFFSET_MINUTES } from "@/domain/dates";
 import { parseAmountToMinor, type Currency, type Money } from "@/domain/money";
 
-/** Unifica saltos de línea y espacios raros de los correos (nbsp, tabs, espacios finos). */
+/**
+ * Unifica saltos de línea y espacios raros de los correos (nbsp, tabs, espacios finos, de ancho cero) y quita
+ * las negritas que pone `getPlainBody()` de Gmail ("Recibiste un *yapeo de S/ 1.00* de…"). Las máscaras de
+ * tarjeta ("************4567", "*** **3 644") no cierran con otro asterisco en la línea y se conservan.
+ */
 export function normalizeText(raw: string): string {
   return raw
     .replace(/\r\n?/g, "\n")
+    .replace(/[​‌‍﻿]/g, "")
+    .replace(/\*(?=[^\s*])([^*\n]*?[^\s*])\*/g, "$1")
     .replace(/[   ]/g, " ")
     .replace(/[ \t]+/g, " ")
     .split("\n")

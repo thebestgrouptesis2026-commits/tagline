@@ -47,8 +47,10 @@ export const bcpParser: BankParser = {
   parse(input): ParseResult {
     const text = normalizeText(input.rawText);
     // El titular de las notificaciones lleva el monto ("Realizaste un consumo de S/ 88.31 …").
-    if (/^(realizaste un (consumo|yapeo)[^\n]* de|recibiste un yape[^\n]* de) (S\/|US\$)/im.test(text)) {
-      return parseNotification(text, input.receivedAt);
+    if (NOTIFICATION_HEADLINE.test(text)) return parseNotification(text, input.receivedAt);
+    // Otra notificación con monto que aún no conocemos: a revisión, nunca ignorada en silencio.
+    if (/^(realizaste|recibiste)\b[^\n]*(S\/|US\$)\s?\d/im.test(text)) {
+      return { ok: false, reason: "unrecognized", detail: "notificación BCP con formato desconocido" };
     }
     const kv = parseKeyValues(text);
     const opRaw = kv.get("operacion") ?? kv.get("tipo de operacion");
@@ -122,49 +124,59 @@ const NOTIFICATION_LABELS = [
   "Enviado por",
   "Monto enviado",
   "Monto recibido",
+  "Monto transferido",
   "Total del consumo",
 ] as const;
 
+const NOTIFICATION_HEADLINE =
+  /^(realizaste un (?:consumo|yapeo)[^\n]* de|realizaste una transferencia[^\n]* de|recibiste un yape[^\n]* de) (S\/|US\$)/im;
+
 /**
- * Notificaciones nuevas de BCP. Verificadas con correos reales: consumo con tarjeta de débito,
- * yapeo a celular enviado y yapeo recibido.
+ * Notificaciones nuevas de BCP. Verificadas con correos reales (texto de `getPlainBody()` de Gmail):
+ * consumo con tarjeta de débito, yapeo a celular enviado y recibido, y transferencia a terceros.
+ * La tabla de datos llega a veces aplanada en una línea ("Operación realizada … Fecha y hora … Enviado a …")
+ * y los números de cuenta van en la línea siguiente a su etiqueta ("Desde Cuenta de ahorro" / "**** 1046").
  */
 function parseNotification(text: string, receivedAt: Date): ParseResult {
   const kv = parseLabelBlocks(text, NOTIFICATION_LABELS);
   const get = (label: string) => kv.get(foldKey(label));
-  const headline = /^(realizaste un (?:consumo|yapeo)[^\n]*|recibiste un yape[^\n]*)/im.exec(text)?.[1] ?? "";
-  const amount = parseMoney(get("Total del consumo") ?? get("Monto enviado") ?? get("Monto recibido") ?? headline);
+  const headline = /^(realizaste un (?:consumo|yapeo)[^\n]*|realizaste una transferencia[^\n]*|recibiste un yape[^\n]*)/im.exec(text)?.[1] ?? "";
+  const amount = parseMoney(get("Total del consumo") ?? get("Monto enviado") ?? get("Monto recibido") ?? get("Monto transferido") ?? headline);
   if (!amount) return { ok: false, reason: "unrecognized", detail: "sin monto" };
 
   const warnings: string[] = [];
   let confidence = 1;
   const h = foldKey(headline);
-  const kind: TxnKind = h.startsWith("realizaste un consumo")
-    ? "purchase"
-    : h.startsWith("realizaste un yapeo")
-      ? "transfer_out"
-      : "transfer_in";
+  const isYapeo = h.includes("yape");
+  const kind: TxnKind = h.startsWith("realizaste un consumo") ? "purchase" : h.startsWith("realizaste") ? "transfer_out" : "transfer_in";
 
-  const occurredAt = parseLimaTextDate(get("Fecha y hora") ?? "");
+  const dateRaw = get("Fecha y hora") ?? /fecha y hora\s+(\d{1,2} de \S+ de \d{4}\s*-\s*\d{1,2}:\d{2}\s*[AP]M)/i.exec(text)?.[1];
+  const occurredAt = parseLimaTextDate(dateRaw ?? "");
   if (!occurredAt) {
     confidence -= 0.1;
     warnings.push("sin_fecha");
   }
 
-  // Débito: "************4567". Yapeo: "desde tu Cuenta de ahorro Soles" no trae dígitos; la cuenta
-  // se resuelve por banco + moneda si solo hay una candidata.
+  // Cuenta propia: tarjeta de débito ("************4567") o "Desde <producto>" + "**** 1046" en la línea siguiente.
+  // Sin dígitos, la cuenta se resuelve por banco + moneda si solo hay una candidata.
   const cardRaw = get("Número de Tarjeta de Débito");
-  const last4 = cardRaw ? lastFour(cardRaw) : null;
+  const from = /\bdesde\s+(?!tu\b)([^\n]+?)\s*\n\s*(\*[\s*]*\d{4})\b/i.exec(text);
+  const last4 = (cardRaw ? lastFour(cardRaw) : null) ?? (from ? lastFour(from[2]!) : null);
   if (kind === "purchase" && !last4) {
     confidence -= 0.3;
     warnings.push("sin_cuenta");
   }
 
   const merchant = kind === "purchase" ? (get("Empresa") ?? /\ben (.+?)\.?$/i.exec(headline)?.[1] ?? null) : null;
-  // Enviado: "Enviado a  Juan P Perez M. *** **3 644". Recibido: "Enviado por  Perez Lopez Juan Pablo".
-  const other = kind === "transfer_in" ? (get("Enviado por") ?? /\bde ([^\d]+?)\.?$/i.exec(headline)?.[1]) : get("Enviado a");
-  const holder = other?.replace(/\s*\*[\s*\d]*$/, "").replace(/\.$/, "").trim() || null;
-  const accountLabel = /desde tu (.+?)\.?$/i.exec(headline)?.[1];
+  // Enviado: "Enviado a Juan P Perez M." + "*** **3 644" (celular) o "**** 9021" (cuenta). Recibido: "Enviado por Perez Lopez Juan Pablo".
+  const sentTo = /enviado a\s+([^\n*]*\p{L}[^\n*]*?)\s*\n\s*(\*[\s*\d]+)/iu.exec(text);
+  const other = kind === "transfer_in" ? (get("Enviado por") ?? /\bde ([^\d]+?)\.?$/i.exec(headline)?.[1]) : (sentTo?.[1] ?? get("Enviado a"));
+  // "Transferencia entre mis cuentas": el "Enviado a" es un producto tuyo ("Clasica"), no una persona.
+  const ownTransfer = /transferencia entre mis cuentas/i.test(text);
+  const holder = ownTransfer ? null : other?.replace(/\s*\*[\s*\d]*$/, "").replace(/\.$/, "").trim() || null;
+  // Un celular ("*** **3 644") no da últimos 4 de cuenta; una cuenta destino ("**** 9021") sí.
+  const otherLast4 = !isYapeo && sentTo ? lastFour(sentTo[2]!) : null;
+  const accountLabel = from?.[1] ?? /desde tu (.+?)\.?$/i.exec(headline)?.[1];
 
   return {
     ok: true,
@@ -176,9 +188,14 @@ function parseNotification(text: string, receivedAt: Date): ParseResult {
       occurredAt: occurredAt ?? receivedAt,
       merchant: kind === "purchase" ? merchant : holder,
       account: { bank: "bcp", last4, type: null, currency: (accountLabel && currencyFromLabel(accountLabel)) || amount.currency },
-      counterparty: kind !== "purchase" && other ? { last4: null, label: "Yape", holder } : null,
+      counterparty:
+        kind !== "purchase" && other
+          ? isYapeo
+            ? { last4: null, label: "Yape", bank: "bcp", holder }
+            : { last4: otherLast4, label: ownTransfer ? "Entre mis cuentas" : (holder ?? "Transferencia"), holder }
+          : null,
       categoryHint: null,
-      reference: get("Número de operación") ?? null,
+      reference: /n[uú]mero de operaci[oó]n\s+(\d{4,})/i.exec(text)?.[1] ?? null,
       keywords: [],
       warnings,
     },
