@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cycleForDate, cycleForInstant, lastClosedCycle, type CardCycleConfig } from "./billing-cycle";
+import { cycleForDate, cycleForInstant, firstDueOnOrAfter, lastClosedCycle, type CardCycleConfig } from "./billing-cycle";
 import { PERU_HOLIDAY_SET } from "./holidays-pe";
 
 /** BCP iO (corte 26) — antes llamada `interbank` en estos tests. Pago 20 del mes siguiente, se adelanta si cae en no hábil. */
@@ -112,5 +112,24 @@ describe("cycleForDate — Interbank (corte 27 / pago 20)", () => {
     expect(cycleForDate("2026-10-26", interbank, H).closingDate).toBe("2026-10-26");
     expect(cycleForDate("2026-10-27", interbank, H).closingDate).toBe("2026-11-26");
     expect(cycleForDate("2026-10-27", interbank27, H).closingDate).toBe("2026-10-27");
+  });
+});
+
+describe("firstDueOnOrAfter — deuda de apertura", () => {
+  it("iO registrada el 27/10: el estado que cerró el 26 aún no vence → 20/11", () => {
+    expect(firstDueOnOrAfter("2026-10-27", interbank, H)).toBe("2026-11-20");
+  });
+
+  it("Interbank registrada el día de su corte: el estado anterior ya venció → 20/11", () => {
+    expect(firstDueOnOrAfter("2026-10-27", interbank27, H)).toBe("2026-11-20");
+  });
+
+  it("iO real (corte 26 / pago 12): lo registrado el 27/10 vence el 12/11", () => {
+    const io: CardCycleConfig = { ...interbank, dueDay: 12 };
+    expect(firstDueOnOrAfter("2026-10-27", io, H)).toBe("2026-11-12");
+  });
+
+  it("registrada justo después de un vencimiento salta al ciclo abierto", () => {
+    expect(firstDueOnOrAfter("2026-11-21", interbank, H)).toBe("2026-12-18");
   });
 });

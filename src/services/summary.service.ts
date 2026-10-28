@@ -1,6 +1,6 @@
 import { getDb } from "@/db/client";
 import { availableUntilPayday, type AvailableResult, type CardPaymentDue, type FixedExpenseDue } from "@/domain/available";
-import { cycleForDate, lastClosedCycle, type CardCycleConfig } from "@/domain/billing-cycle";
+import { cycleForDate, firstDueOnOrAfter, lastClosedCycle, type CardCycleConfig } from "@/domain/billing-cycle";
 import { addDays, limaStartOfDayUtc, makeDate, parts, toLimaDate, type CalendarDate } from "@/domain/dates";
 import { consolidate, negate, sumByCurrency, type ByCurrency, type Currency, type FxToBase } from "@/domain/money";
 import { nextPayday } from "@/domain/payday";
@@ -79,8 +79,11 @@ export async function getHomeSummary(userId: string, now = new Date()) {
         repo.installmentsDue(db, userId, card.id, acct.currency, last.closingDate),
         repo.installmentsDue(db, userId, card.id, acct.currency, open.closingDate),
       ]);
-      const lastDebt = Math.max(0, -sums.lastNet + instLast);
-      const openDebt = Math.max(0, -sums.openNet + instOpen);
+      // La deuda de apertura no está en `transactions`: se suma al ciclo que vence primero tras registrarla.
+      const openingDebt = Math.max(0, -acct.openingBalanceMinor);
+      const openingDue = openingDebt > 0 ? firstDueOnOrAfter(toLimaDate(acct.openingBalanceAt), cfg, holidays) : null;
+      const lastDebt = Math.max(0, -sums.lastNet + instLast + (openingDue === last.dueDate ? openingDebt : 0));
+      const openDebt = Math.max(0, -sums.openNet + instOpen + (openingDue === open.dueDate ? openingDebt : 0));
       const paid = sums.paymentsSinceClosing;
       const lastRemaining = Math.max(0, lastDebt - paid);
       const openRemaining = Math.max(0, openDebt - Math.max(0, paid - lastDebt));

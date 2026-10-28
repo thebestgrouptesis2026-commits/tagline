@@ -57,7 +57,7 @@
       "last4": "1111",
       "limit": "3000.00",
       "closingDay": 26,
-      "dueDay": 20,
+      "dueDay": 12,
       "currencies": [
         "PEN",
         "USD"

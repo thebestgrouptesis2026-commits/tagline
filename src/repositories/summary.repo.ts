@@ -34,6 +34,8 @@ export async function accountBalances(ex: Executor, userId: string) {
       color: accounts.color,
       creditCardId: accounts.creditCardId,
       includeInNetWorth: accounts.includeInNetWorth,
+      openingBalanceMinor: accounts.openingBalanceMinor,
+      openingBalanceAt: accounts.openingBalanceAt,
       balanceMinor: sql<number>`${accounts.openingBalanceMinor} + coalesce(sum(${transactions.amountMinor}), 0)`.mapWith(Number),
     })
     .from(accounts)

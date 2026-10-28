@@ -8,9 +8,11 @@
 - [x] Login con enlace por correo y passkeys; pantalla de inicio mobile-first; PWA.
 - [x] Transferencias a uno mismo (Plin/Yape) como movimiento interno.
 - [x] Apps Script de Gmail, guías de Atajos y despliegue.
-- [ ] **Correr `npm install`, `npm test` y `npm run typecheck`** (los parsers nuevos se escribieron sin poder ejecutarlos).
+- [x] Correr `npm install`, `npm test` y `npm run typecheck`.
+- [x] Base en Neon migrada y con semilla real; login por correo (Resend) probado en local.
 - [ ] Desplegar y probar con `curl`.
-- [ ] Bandeja de **Revisión** y pantalla de **Movimientos** (lista, filtros, recategorizar).
+- [x] Barra inferior y pantalla de **Movimientos** (lista por día, filtros, recategorizar con aprendizaje).
+- [ ] Bandeja de **Revisión**.
 - [ ] Pantallas de **Cuentas** y **Tarjetas**.
 
 ## v1

@@ -74,3 +74,12 @@ export function lastClosedCycle(today: CalendarDate, card: CardCycleConfig, holi
   const open = cycleForDate(today, card, holidays);
   return cycleForDate(addDays(open.periodStart, -1), card, holidays);
 }
+
+/**
+ * Primer vencimiento en o después de `date`. Sirve para la deuda de apertura de una tarjeta:
+ * lo que ya debías al registrarla se paga en el próximo vencimiento, sea del estado ya cerrado o del ciclo abierto.
+ */
+export function firstDueOnOrAfter(date: CalendarDate, card: CardCycleConfig, holidays: Holidays): CalendarDate {
+  const closed = lastClosedCycle(date, card, holidays);
+  return closed.dueDate >= date ? closed.dueDate : cycleForDate(date, card, holidays).dueDate;
+}

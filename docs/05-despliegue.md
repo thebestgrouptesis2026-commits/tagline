@@ -42,7 +42,7 @@ cp scripts/seed.config.example.json scripts/seed.config.json   # edítalo: tu no
 npm run db:seed
 npm run token:create -- "curl de prueba"
 ```
-`seed.config.json` ya está en `.gitignore`. Pon en `fullName` tu nombre como sale en los bancos (sirve para reconocer transferencias a ti mismo). Las tarjetas deben tener sus **últimos 4 dígitos reales** y los cortes correctos (iO: 26, Interbank: 27, pago 20).
+`seed.config.json` ya está en `.gitignore`. Pon en `fullName` tu nombre como sale en los bancos (sirve para reconocer transferencias a ti mismo). Las tarjetas deben tener sus **últimos 4 dígitos reales** y los cortes correctos (iO: corte 26 / pago 12; Interbank: corte 27 / pago 20).
 
 ## 5. Probar el webhook con `curl`
 ```bash

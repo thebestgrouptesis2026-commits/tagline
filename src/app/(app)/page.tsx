@@ -1,3 +1,4 @@
+import { labelForKind } from "@/components/kind-label";
 import { Logo } from "@/components/logo";
 import { Amount, AmountByCurrency, monthLabel, shortDate } from "@/components/money";
 import { PasskeyRegister } from "@/components/passkey-buttons";
@@ -251,23 +252,6 @@ function SplitBar({ income, expenses }: { income: number | null; expenses: numbe
       ) : null}
     </div>
   );
-}
-
-function labelForKind(kind: string): string {
-  const labels: Record<string, string> = {
-    salary: "Sueldo",
-    deposit: "Depósito",
-    income_other: "Ingreso",
-    transfer_in: "Transferencia recibida",
-    transfer_out: "Transferencia enviada",
-    cash_withdrawal: "Retiro de efectivo",
-    card_payment: "Pago de tarjeta",
-    refund: "Devolución",
-    fee: "Comisión",
-    interest: "Interés",
-    purchase: "Compra",
-  };
-  return labels[kind] ?? "Movimiento";
 }
 
 function EmptyState() {
